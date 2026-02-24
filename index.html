@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skladník Offline Prototyp</title>
+    <style>
+        /* Tady je ten vzhled (CSS) */
+        body { font-family: sans-serif; background: #e8ecef; display: flex; justify-content: center; padding: 20px; }
+        .box { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        h1 { color: #2c3e50; text-align: center; }
+        button { width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.3s; }
+        #mic-btn { background: #e74c3c; color: white; }
+        #mic-btn.active { background: #2ecc71; animation: pulse 1.5s infinite; }
+        #save-btn { background: #3498db; color: white; }
+        table { width: 100%; margin-top: 20px; border-collapse: collapse; }
+        th, td { border-bottom: 1px solid #ddd; padding: 10px; text-align: left; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h1>Skladník 📦</h1>
+    <button id="mic-btn">ZMÁČKNI A DIKTUJ</button>
+    <button id="save-btn">ULOŽIT DO EXCELU (CSV)</button>
+    
+    <table id="seznam">
+        <thead>
+            <tr>
+                <th>Kód/Název</th>
+                <th>Ks</th>
+                <th>Pozice</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<script>
+    // Tady je ta logika (JavaScript)
+    const btn = document.getElementById('mic-btn');
+    const tbody = document.querySelector('#seznam tbody');
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!Recognition) {
+        alert("Tvůj prohlížeč nepodporuje rozpoznávání hlasu. Zkus Chrome.");
+    } else {
+        const rec = new Recognition();
+        rec.lang = 'cs-CZ';
+        rec.continuous = false;
+
+        btn.onclick = () => {
+            rec.start();
+            btn.classList.add('active');
+            btn.innerText = "POSLOUCHÁM...";
+        };
+
+        rec.onresult = (event) => {
+            const nalezene = event.results[0][0].transcript.toLowerCase();
+            btn.classList.remove('active');
+            btn.innerText = "ZMÁČKNI A DIKTUJ";
+            
+            // Logika rozdělení (vyladíme příště)
+            const dily = nalezene.split(" ");
+            const radek = document.createElement('tr');
+            // Jednoduché rozdělení: 1. slovo=název, 2. slovo=počet, zbytek=pozice
+            radek.innerHTML = `<td>${dily[0] || '?'}</td><td>${dily[1] || '1'}</td><td>${dily.slice(2).join(" ") || '-'}</td>`;
+            tbody.appendChild(radek);
+        };
+    }
+
+    document.getElementById('save-btn').onclick = () => {
+        let csv = "Nazev;Pocet;Pozice\n";
+        document.querySelectorAll("tbody tr").forEach(tr => {
+            const tds = tr.querySelectorAll("td");
+            csv += `${tds[0].innerText};${tds[1].innerText};${tds[2].innerText}\n`;
+        });
+        const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'sklad_data.csv';
+        a.click();
+    };
+</script>
+
+</body>
+</html>
